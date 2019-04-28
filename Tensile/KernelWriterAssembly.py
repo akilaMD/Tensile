@@ -608,8 +608,6 @@ class KernelWriterAssembly(KernelWriter):
       self.totalSgprs = self.startSgprTmpPool + num + pad
       if 0:
         print("grow sgpr to ", self.totalSgprs, "start=", self.startSgprTmpPool)
-        import pdb
-        pdb.set_trace()
       #print "startSgprTmpPool=", self.startSgprTmpPool
       #print "warning: growing SGPR pool to ", self.totalSgprs
 
@@ -1263,7 +1261,6 @@ class KernelWriterAssembly(KernelWriter):
     numSgprAddressB = self.rpga # til read offsets
     numSgprAlpha = max(1,int(tPA["bpe"]/4))
     numSgprBeta  = max(1,int(self.bpeCexternal/4)) if kernel["ProblemType"]["UseBeta"] else 0
-    self.numSgprStridesD = kernel["ProblemType"]["NumIndicesC"]
     self.numSgprStridesC = kernel["ProblemType"]["NumIndicesC"]
     self.numSgprStridesA = len(kernel["ProblemType"]["IndexAssignmentsA"])
     self.numSgprStridesB = len(kernel["ProblemType"]["IndexAssignmentsB"])
@@ -1803,24 +1800,6 @@ class KernelWriterAssembly(KernelWriter):
     kernArgBytes = kernArgReg * 4 # bytes/reg
     kStr += "  kernarg_segment_byte_size = %u // bytes of kern args%s" \
         % (kernArgBytes, self.endLine)
-    # kernArgReg = 0
-    # kernArgReg += 3*self.rpga
-    # kernArgReg += max(1,int(self.bpeAB/4)) # alpha
-    # if kernel["ProblemType"]["UseBeta"]:
-      # kernArgReg += max(1,int(self.bpeCexternal/4)) # beta
-    # kernArgReg += 3 # offsets
-    # kernArgReg += kernel["ProblemType"]["NumIndicesC"] # strides
-    # kernArgReg += len(kernel["ProblemType"]["IndexAssignmentsA"]) # strides
-    # kernArgReg += len(kernel["ProblemType"]["IndexAssignmentsB"]) # strides
-    # if not kernel["ProblemType"]["UseInitialStrides"]:
-      # kernArgReg -= 3 # strides
-    # kernArgReg += kernel["ProblemType"]["NumIndicesSummation"]
-    # kernArgReg += kernel["ProblemType"]["NumIndicesC"]
-    # if globalParameters["DebugKernel"]:
-      # kernArgReg += self.rpga # debug buffer
-    # kernArgBytes = kernArgReg * 4 # bytes/reg
-    # kStr += "  kernarg_segment_byte_size = %u // bytes of kern args%s" \
-        # % (kernArgBytes, self.endLine)
 
     # register allocation
     totalVgprs = self.vgprPool.size()
@@ -4677,7 +4656,7 @@ class KernelWriterAssembly(KernelWriter):
                 # is moving at NumThreads*4.  This should already be guaranteed since
                 # we only use direct-to-lds for non-transpose cases but double-check here.
                 ldsInc = kernel["NumThreads"]*4
-                print ("checkOffset=", checkOffset, "ldsOffset=", ldsOffset, "ldsInc=", ldsInc)
+                #print ("checkOffset=", checkOffset, "ldsOffset=", ldsOffset, "ldsInc=", ldsInc)
 
 
                 if directToLdsLoads != 0:
@@ -5006,6 +4985,7 @@ class KernelWriterAssembly(KernelWriter):
                 nonTemporal, highBits),comment))
 
             loopCnt+=1
+            
       if tmpLocalWriteAddr != -1:
         self.vgprPool.checkIn(tmpLocalWriteAddr)
 
@@ -6405,7 +6385,7 @@ class KernelWriterAssembly(KernelWriter):
         #  #print "  NumVectorsPerBatch", numVectorsPerBatch
         #  numElementsPerBatch = numVectorsPerBatch * kernel["GlobalWriteVectorWidth"]
         numBatches = max(1, ceil_divide(len(elements[edgeI]),numElementsPerBatch))
-        print("NumBatches", numBatches, "NumElementsPerBatch", numElementsPerBatch, "numVgprsPerElement", numVgprsPerElement, "len(elements[edgeI])", len(elements[edgeI]))
+        #print("NumBatches", numBatches, "NumElementsPerBatch", numElementsPerBatch, "numVgprsPerElement", numVgprsPerElement, "len(elements[edgeI])", len(elements[edgeI]))
 
         tmpSgpr = self.getTmpSgpr(fixedSgprsPerBatch+numSgprsPerElement*numElementsPerBatch)
         elementSgprs = tmpSgpr + fixedSgprsPerBatch
@@ -6414,7 +6394,7 @@ class KernelWriterAssembly(KernelWriter):
           elementStartIdx = batchIdx * numElementsPerBatch
           elementStopIdx = min( elementStartIdx + numElementsPerBatch, len(elements[edgeI]) )
           elementsThisBatch = elements[edgeI][elementStartIdx:elementStopIdx]
-          print("BATCH[%u/%u]: elements[edgeI][%u:%u] VGPRs=%u" % (batchIdx, numBatches, elementStartIdx, elementStopIdx,numVgprsPerElement ))
+          #print("BATCH[%u/%u]: elements[edgeI][%u:%u] VGPRs=%u" % (batchIdx, numBatches, elementStartIdx, elementStopIdx,numVgprsPerElement ))
           # elementVgprs can be large and should be perfectly tuned to the number of available
           # VGPRS.  We do not want to accidentally overflow and grow the pool here:
 
@@ -6567,8 +6547,6 @@ class KernelWriterAssembly(KernelWriter):
 
     if atomic:
       # all kinds of code relies on this assumption:
-      import pdb
-      pdb.set_trace()
       assert(atomicW <= gwvw)
       if kernel["ProblemType"]["DataType"].isHalf():
         assert(atomicW >= 2)
