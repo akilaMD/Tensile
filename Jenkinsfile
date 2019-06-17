@@ -53,7 +53,7 @@ tensileCI:
                         mkdir build && cd build
                         export PATH=/opt/rocm/bin:$PATH
                         export LLVM_DIR=/usr/lib64/llvm7.0/lib/cmake
-                        cmake3 -D CMAKE_BUILD_TYPE=Debug ../lib
+                        cmake3 -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/g++ -DCMAKE_BUILD_TYPE=Debug ../lib
                         make -j16
                         ./test/TensileTests --gtest_output=xml:host_test_output.xml --gtest_color=yes
                     """            
