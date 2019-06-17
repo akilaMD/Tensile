@@ -15,6 +15,13 @@ RUN yum install -y \
     rock-dkms \
     centos-release-scl \
     devtoolset-7 \
+    llvm \
+    llvm-devel \
+    llvm-libs \
+    llvm-static \
+    llvm-toolset-7 \
+    llvm-toolset-7-libomp \
+    llvm-toolset-7-libomp-devel \
     ca-certificates \
     git \
     cmake3 \
@@ -31,8 +38,6 @@ RUN yum install -y \
     PyYAML \
     numactl-libs \
     libcxx-devel \
-    llvm7.0 \
-    llvm-toolset-7 \
     boost-devel \
     zlib-devel \
     rpm-build \
