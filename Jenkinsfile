@@ -41,17 +41,31 @@ tensileCI:
         try
         {    
             project.paths.construct_build_prefix()
-
-            def command = """#!/usr/bin/env bash
-                    set -x
-                    cd ${project.paths.project_build_prefix}
-                    mkdir build && cd build
-                    export PATH=/opt/rocm/bin:$PATH
-                    ${project.paths.build_command}
-                    make -j16
-                    ./test/TensileTests --gtest_output=xml:host_test_output.xml --gtest_color=yes
-                    """
-
+            
+            if(platform.jenkinsLabel.contains('centos'))
+            {
+                def command = """#!/usr/bin/env bash
+                            set -x
+                            cd ${project.paths.project_build_prefix}
+                            mkdir build && cd build
+                            export PATH=/opt/rocm/bin:$PATH
+                            cmake3 -D CMAKE_BUILD_TYPE=Debug ../lib
+                            make -j16
+                            ./test/TensileTests --gtest_output=xml:host_test_output.xml --gtest_color=yes
+                        """            
+            }
+            else
+            {
+                def command = """#!/usr/bin/env bash
+                            set -x
+                            cd ${project.paths.project_build_prefix}
+                            mkdir build && cd build
+                            export PATH=/opt/rocm/bin:$PATH
+                            ${project.paths.build_command}
+                            make -j16
+                            ./test/TensileTests --gtest_output=xml:host_test_output.xml --gtest_color=yes
+                        """
+            }
             platform.runCommand(this, command)
         }
         finally
