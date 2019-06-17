@@ -31,6 +31,7 @@ RUN yum install -y \
     PyYAML \
     numactl-libs \
     libcxx-devel \
+    llvm-toolset-7 \
     llvm7.0-devel \
     boost-devel \
     zlib-devel \
