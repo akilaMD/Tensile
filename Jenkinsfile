@@ -51,7 +51,7 @@ tensileCI:
                         set -x
                         cd ${project.paths.project_build_prefix}
                         mkdir build && cd build
-                        export PATH=/opt/rocm/bin:/opt/rh/devttoolset-7/root/usr/gcc/x86_64-redhat-linux/7/:/opt/rh/devttoolset-7/root/usr/gcc/x86_64-redhat-linux/7/32/:$PATH
+                        export PATH=/opt/rocm/bin:$PATH
                         export LLVM_DIR=/usr/lib64/llvm7.0/lib/cmake
                         cmake3 -DCMAKE_C_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/gcc -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/g++ -DCMAKE_BUILD_TYPE=Debug ../lib
                         make -j16

@@ -19,6 +19,7 @@ RUN yum install -y \
     llvm7.0-devel \
     llvm7.0-static \
     llvm-toolset-7 \
+    libgomp \
     ca-certificates \
     git \
     cmake3 \
