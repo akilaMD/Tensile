@@ -53,7 +53,7 @@ tensileCI:
                         mkdir build && cd build
                         export PATH=/opt/rocm/bin:$PATH
                         export LLVM_DIR=/usr/lib64/llvm7.0/lib/cmake
-                        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7/"
+                        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7/
                         sudo ldconfig
                         cmake3 -DCMAKE_C_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/gcc -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/g++ -DCMAKE_BUILD_TYPE=Debug ../lib
                         make -j16

@@ -19,6 +19,7 @@ RUN yum install -y \
     llvm7.0-devel \
     llvm7.0-static \
     llvm-toolset-7 \
+    llvm-toolset-7-libomp-devel \
     libgomp \
     ca-certificates \
     git \
