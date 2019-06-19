@@ -31,7 +31,7 @@ tensileCI:
     def tensile = new rocProject('tensile')
     tensile.paths.build_command = 'cmake -D CMAKE_BUILD_TYPE=Debug ../lib'
     // Define test architectures, optional rocm version argument is available
-    def nodes = new dockerNodes(['gfx900 && centos7','gfx906'], tensile)
+    def nodes = new dockerNodes(['gfx900 && centos7'], tensile)
 
     boolean formatCheck = false
     
@@ -53,7 +53,6 @@ tensileCI:
                         mkdir build && cd build
                         export PATH=/opt/rocm/bin:$PATH
                         export LLVM_DIR=/usr/lib64/llvm7.0/lib/cmake
-                        export LD_LIBRARY_PATH=/opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7:/opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7/32:$LD_LIBRARY_PATH
                         cmake3 -DCMAKE_C_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/gcc -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/g++ -DCMAKE_BUILD_TYPE=Debug ../lib
                         make -j16
                         sudo ./test/TensileTests --gtest_output=xml:host_test_output.xml --gtest_color=yes
