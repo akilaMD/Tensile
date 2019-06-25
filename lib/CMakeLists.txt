@@ -27,7 +27,7 @@ endif()
 if(NOT TENSILE_DISABLE_TESTS)
     enable_testing()
 
-    if(CMAKE_VERSION VERSION_GREATER 3.9)
+    if(CMAKE_VERSION VERSION_GREATER 3.9 OR [-e /etc/redhat-release])
         include(GoogleTest)
         option(GTEST_INTEGRATION "Enable Googletest integration with CMake." ON)
     else()
