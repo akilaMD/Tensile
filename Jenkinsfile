@@ -85,11 +85,19 @@ tensileCI:
 
                     pushd build
                     ./TensileTests --gtest_output=xml:host_test_output.xml --gtest_color=yes
+                    var1 = $?
 
                     popd
                     tox --version
                     tox -vv --workdir /tmp/.tensile-tox -e py35 -- Tensile/UnitTests ${test_dir}
+                    var2 = $?
                     date
+
+                    if [[ var1 -ne 0 ]]; then
+                        exit var1
+                    elif [[ var2 -ne 0 ]]; then
+                        exit var2 
+                    fi
                 """
             platform.runCommand(this, command)
         }
