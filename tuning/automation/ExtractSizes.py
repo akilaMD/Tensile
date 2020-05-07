@@ -26,13 +26,13 @@ import argparse
 
 import csv
 
-rocblas_parameters = ["f","transposeA","transposeB","m","n","k","alpha","a_type","lda","stride_a","b_type","ldb","stride_b","beta","c_type","ldc","stride_c","d_type","ldd","stride_d","batch","compute_type","algo" ,"solution_index","flags","i"] #,"workspace_size" ]
+rocblas_parameters = ["f","transposeA","transposeB","m","n","k","alpha","a_type","lda","stride_a","b_type","ldb","stride_b","beta","c_type","ldc","stride_c","d_type","ldd","stride_d","batch_count","compute_type","algo" ,"solution_index","flags","i"] #,"workspace_size" ]
 
 gemm_ex_keys = ["-f", "--transposeA","--transposeB","-m","-n","-k","--alpha","--a_type","--lda","--b_type","--ldb","--beta","--c_type","--ldc","--d_type","--ldd","--compute_type","--algo","--solution_index","--flags","-i"] #,"--workspace_size"]
 gemm_keys = ["-f","-r","--transposeA","--transposeB","-m","-n","-k","--alpha","--lda","--ldb","--beta","--ldc","-i"]
 
-gemm_strided_batched_ex_keys = ["-f","--transposeA","--transposeB","-m","-n","-k","--alpha","--a_type","--lda","--stride_a","--b_type","--ldb","--stride_b","--beta","--c_type","--ldc","--stride_c","--d_type","--ldd","--stride_d","--batch","--compute_type","--algo","--solution_index","--flags","-i"]#,"--workspace_size"]
-gemm_strided_batched_keys = ["-f","-r","--transposeA","--transposeB","-m","-n","-k","--alpha","--lda","--stride_a","--ldb","--stride_b","--beta","--ldc","--stride_c","--batch","-i"]
+gemm_strided_batched_ex_keys = ["-f","--transposeA","--transposeB","-m","-n","-k","--alpha","--a_type","--lda","--stride_a","--b_type","--ldb","--stride_b","--beta","--c_type","--ldc","--stride_c","--d_type","--ldd","--stride_d","--batch_count","--compute_type","--algo","--solution_index","--flags","-i"]#,"--workspace_size"]
+gemm_strided_batched_keys = ["-f","-r","--transposeA","--transposeB","-m","-n","-k","--alpha","--lda","--stride_a","--ldb","--stride_b","--beta","--ldc","--stride_c","--batch_count","-i"]
 
 rocblas_key_mapping = {"gemm_ex":gemm_ex_keys, "gemm":gemm_keys, "gemm_strided_batched_ex":gemm_strided_batched_ex_keys, "gemm_strided_batched":gemm_strided_batched_keys}
 
@@ -47,7 +47,7 @@ def GetRocBLASParser():
     lineParser.add_argument("-m",dest="m", type=str)
     lineParser.add_argument("-n",dest="n", type=str)
     lineParser.add_argument("-k",dest="k", type=str)
-    lineParser.add_argument("--batch",dest="batch", type=int,default=1)
+    lineParser.add_argument("--batch_count","--batch",dest="batch_count", type=int,default=1)
     lineParser.add_argument("--a_type",dest="a_type", type=str)
     lineParser.add_argument("--b_type",dest="b_type", type=str)
     lineParser.add_argument("--c_type",dest="c_type", type=str)
@@ -166,7 +166,7 @@ def GenConvolutionBackwardWeightsConv1x1(input,weights,convolution,output):
     problemDefinition["m"] = n
     problemDefinition["n"] = m
     problemDefinition["k"] = k
-    problemDefinition["batch"] = batch_count
+    problemDefinition["batch_count"] = batch_count
     problemDefinition["lda"] = ldb
     problemDefinition["ldb"] = lda
     problemDefinition["ldc"] = ldc
@@ -227,7 +227,7 @@ def GenConvolutionBackwardWeights(input,weights,convolution,output):
     problemDefinition["m"] = n
     problemDefinition["n"] = m
     problemDefinition["k"] = k
-    problemDefinition["batch"] = batch_count
+    problemDefinition["batch_count"] = batch_count
     problemDefinition["lda"] = ldb
     problemDefinition["ldb"] = lda
     problemDefinition["ldc"] = ldc
@@ -306,7 +306,7 @@ def GenConvolutionBackwardDataConv1x1(input,weights,convolution,output):
     problemDefinition["m"] = n
     problemDefinition["n"] = m
     problemDefinition["k"] = k
-    problemDefinition["batch"] = batch_count
+    problemDefinition["batch_count"] = batch_count
     problemDefinition["lda"] = ldb
     problemDefinition["ldb"] = lda
     problemDefinition["ldc"] = ldc
@@ -368,7 +368,7 @@ def GenConvolutionBackwardData(input,weights,convolution,output):
     problemDefinition["m"] = n
     problemDefinition["n"] = m
     problemDefinition["k"] = k
-    problemDefinition["batch"] = batch_count
+    problemDefinition["batch_count"] = batch_count
     problemDefinition["lda"] = ldb
     problemDefinition["ldb"] = lda
     problemDefinition["ldc"] = ldc
@@ -447,7 +447,7 @@ def GenConvolutionForwardCNHWFwd(input,weights,convolution,output):
     problemDefinition["m"] = n
     problemDefinition["n"] = m
     problemDefinition["k"] = k
-    problemDefinition["batch"] = batch_count
+    problemDefinition["batch_count"] = batch_count
     problemDefinition["lda"] = ldb
     problemDefinition["ldb"] = lda
     problemDefinition["ldc"] = ldc
@@ -507,7 +507,7 @@ def GenConvolutionForwardConv1x1(input,weights,convolution,output):
     problemDefinition["m"] = n
     problemDefinition["n"] = m
     problemDefinition["k"] = k
-    problemDefinition["batch"] = batch_count
+    problemDefinition["batch_count"] = batch_count
     problemDefinition["lda"] = ldb
     problemDefinition["ldb"] = lda
     problemDefinition["ldc"] = ldc
@@ -569,7 +569,7 @@ def GenConvolutionForward(input,weights,convolution,output):
     problemDefinition["m"] = n
     problemDefinition["n"] = m
     problemDefinition["k"] = k
-    problemDefinition["batch"] = batch_count
+    problemDefinition["batch_count"] = batch_count
     problemDefinition["lda"] = ldb
     problemDefinition["ldb"] = lda
     problemDefinition["ldc"] = ldc
@@ -691,6 +691,54 @@ def UpdateOutputMapping(mapper, problemDefinition):
     if problemDefinition not in lineDefinitions:
         lineDefinitions.append(problemDefinition)
 
+def ConvertToRocBlasBenchCall(line):
+    benchLine = './rocblas-bench '
+    if "strided" in line:
+        benchLine += '-f gemm_strided_batched'
+    else:
+        benchLine += '-f gemm'
+    if "_ex" in line:
+        benchLine += '_ex '
+    else:
+        benchLine += ' '
+    if "sgemm" in line:
+        benchLine += '-r s '
+    elif "hgemm" in line:
+        benchLine += '-r h '
+    elif "dgemm" in line:
+        benchLine += '-r d '
+
+    line = str(line.split(','))
+    line = line.replace('"','').replace(' ','').replace('\'','').replace('[-{','').replace('}\\n]','').replace(':',',')
+    line = line.split(',')
+    sameParams = set(['b_type','c_type','d_type','compute_type','lda','ldb','ldc','ldd','batch','batch_count','algo','solution_index','flags','stride_a','stride_b','stride_c','alpha','beta'])
+
+    for item in range(2,len(line)):
+        if line[item] in sameParams: 
+            benchLine += ('--'+line[item]+' '+line[item+1]+' ')
+        if line[item] == 'transA':
+            benchLine += ('--transposeA '+line[item+1]+' ')
+        if line[item] == 'transB':
+            benchLine += ('--transposeB '+line[item+1]+' ')
+        if line[item] == 'M':
+            benchLine += ('-m '+line[item+1]+' ')
+        if line[item] == 'N' and line[item-1] != 'transA' and line[item-1] != 'transB':
+            benchLine += ('-n '+line[item+1]+' ')
+        if line[item] == 'K':
+            benchLine += ('-k '+line[item+1]+' ')
+        if line[item] == 'call_count':
+            benchLine += ('-i '+line[item+1])
+        if line[item] == 'a_type':
+            if line[item+1] == 'f32_r':
+                benchLine += ('-r s ')
+            elif line[item+1] == 'f16_r':
+                benchLine += ('-r h ')
+            else:
+                benchLine += ('-r d ')
+            benchLine += ('--'+line[item]+' '+line[item+1]+' ')
+    
+    return benchLine
+
 def ProcessFile(filename):
 
     parser = GetInceptionParser()
@@ -717,6 +765,13 @@ def ProcessFile(filename):
             if "rocblas-bench" in line:
                 args=line.split(' ')
                 parsedArgs, otherArgs =  rocblasParser.parse_known_args(args)
+                problemDefinition = vars(parsedArgs)
+                UpdateOutputMapping(problemMapper, problemDefinition)
+
+            if "{" in line:
+                benchLine = ConvertToRocBlasBenchCall(line)
+                args = benchLine.split(' ')
+                parsedArgs, otherArgs = rocblasParser.parse_known_args(args)
                 problemDefinition = vars(parsedArgs)
                 UpdateOutputMapping(problemMapper, problemDefinition)
 
@@ -758,14 +813,13 @@ def GetTensileSize(problemDefinition):
 
     m = problemDefinition["m"]
     n = problemDefinition["n"]
-    batch = problemDefinition["batch"]
+    batch = problemDefinition["batch_count"]
     k = problemDefinition["k"] 
 
     size = "          - Exact: [ %s , %s , %s, %s ]" % (m,n,batch,k)
     return size
 
 def BuildRocBLASBenchmarkCall(problemDefinition):
-    
     f = problemDefinition["f"]
     keys = rocblas_key_mapping[f]
 

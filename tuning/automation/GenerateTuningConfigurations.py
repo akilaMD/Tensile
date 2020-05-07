@@ -99,12 +99,12 @@ def GetSize(problemDefinition):
     k = int(problemDefinition["k"])
     b = 1
 
-    if "batch" in problemDefinition:
-        b = int(problemDefinition["batch"])
+    if "batch_count" or "batch" in problemDefinition:
+        b = int(problemDefinition["batch_count"])
 
     return [m, n, b, k]
 
-def ClassifySize(size):
+def ClassifySize(size,mfma="false"):
     m = size[0]
     n = size[1]
     b = size[2]
@@ -118,18 +118,16 @@ def ClassifySize(size):
     small = 128 * 128
     medium = 512 * 512
 
-    if b > 1:
+    if mfma == "true":
+        sizeKey = "matrix"
+    elif b > 1:
         sizeKey = "batch"
-
     elif (scale <= tiny):
         sizeKey = "tiny"
-
     elif (scale <= small):
         sizeKey = "small"
-
     elif (scale <= medium):
         sizeKey = "medium"
-
     else:
         sizeKey = "large"
 
@@ -155,7 +153,7 @@ def GetProblemType(key,tileAware):
 
     return problemType
 
-def generateBenchmarkGroupFromScheme(scheme, tileAware="false"):
+def generateBenchmarkGroupFromScheme(scheme,tileAware="false"):
     benchmarkGroup = generateEmptyBenchmarkGroup()
 
     commonParams = []
@@ -182,7 +180,7 @@ def generateBenchmarkGroupFromScheme(scheme, tileAware="false"):
     benchmarkGroup["ForkParameters"] = forkParams
     benchmarkGroup["BenchmarkCommonParameters"] = commonParams
     benchmarkGroup["BenchmarkFinalParameters"] = finalParams
-
+    
     return benchmarkGroup
 
 def generateDefaultScheme():
@@ -199,61 +197,143 @@ def generateDefaultScheme():
 
     return scheme
 
-def updateProblemGroupFromKey(problemKey, sizeKey,problemGroup,sizeList, tileAware="false"):
+def generateMfmaScheme():
+    scheme={"EdgeType": ["ShiftPtr"],
+            "KernelLanguage": ["Assembly"],
+            "LoopTail": [True],
+            "WorkGroupMapping": [8],
+            "DepthU": [8,16,32],
+            "SuppressNoLoadLoop": [True,False],
+            "OptNoLoadLoop": [0,1],
+            "VectorWidth": [1],
+            "GlobalSplitU": [1],
+            "GlobalReadVectorWidth": [-1,1,2,4],
+            "LdsPadA": [0,-1],
+            "LdsPadB": [0,-1],
+            "UseSgprForGRO": [0,1],
+            "FractionalLoad": [0,1],
+            "PrefetchLocalRead": [False,True]}
 
+    return scheme
+
+def updateProblemGroupFromKey(problemKey,sizeKey,problemGroup,sizeList,tileAware="false",mfma="false",rk="false"):
     _ , transposeA, transposeB, dType = problemKey
     
     transposeType = "%s%s" % (transposeA.lower(),transposeB.lower())
     benchmarkGroup = None
+            
+    if transposeType == "tn" and rk == "true" and mfma == "false":
+        scheme = generateDefaultScheme()
+        scheme["GlobalSplitU"] = [1,3]
+        scheme["ReplacementKernel"] = [True]
+        noExact = True
+        benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
+        appendThreadTiles(benchmarkGroup, [[8,2],[8,4],[2,8],[4,8],[16,2],[16,4],[16,8],[2,16],[4,16],[8,16]])
+        appendWorkGroups(benchmarkGroup, [[16,16,1],[8,8,1]])
+        appendSizes(benchmarkGroup,sizeList,tileAware,noExact,rk)
+        problemGroup.append(benchmarkGroup)
 
-    scheme = generateDefaultScheme()
+        benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
+        appendThreadTiles(benchmarkGroup, [[4,4]])
+        appendWorkGroups(benchmarkGroup, [[16,32,1]])
+        appendSizes(benchmarkGroup,sizeList,tileAware,False,rk)
+        problemGroup.append(benchmarkGroup)
 
-    if dType == "h":
-        scheme["AssertSummationElementMultiple"] = [2]
-        scheme["AssertFree0ElementMultiple"] = [2]
+    elif mfma == "true":
+        scheme = generateMfmaScheme()
+        if dType == "h":
+            scheme["AssertSummationElementMultiple"] = [2]
+            scheme["AssertFree0ElementMultiple"] = [2]
+        
+        if dType == "s": 
+            if transposeType == "tn" and rk == "true":
+                scheme["GlobalSplitU"] = [1,3]
+                scheme["ReplacementKernel"] = [True]
+                noExact = True
+                benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
+                appendMatrixInstructions(benchmarkGroup, [[16, 16, 1, 4],[16, 16, 4, 1]])
+                appendThreadTiles(benchmarkGroup, [[4,16],[8,16]])
+                appendWorkGroups(benchmarkGroup, [[16,16,1]])
+                appendSizes(benchmarkGroup,sizeList,tileAware,noExact,rk)
+                problemGroup.append(benchmarkGroup)
+
+                benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
+                appendMatrixInstructions(benchmarkGroup, [[16, 16, 1, 4],[16, 16, 4, 1]])
+                appendThreadTiles(benchmarkGroup, [[4,16],[8,16]])
+                appendWorkGroups(benchmarkGroup, [[16,16,1]])
+                appendSizes(benchmarkGroup,sizeList,tileAware,False,rk)
+                problemGroup.append(benchmarkGroup)
+            else:
+                benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
+                appendMatrixInstructions(benchmarkGroup, [[32, 32, 1, 2]])
+                appendThreadTiles(benchmarkGroup, [[1,32],[2,32],[4,32],[1,64],[2,64]])
+                appendWorkGroups(benchmarkGroup, [[16,16,1],[64,4,1]])
+                appendSizes(benchmarkGroup,sizeList,tileAware)
+                problemGroup.append(benchmarkGroup)
+            
+                benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware)     
+                appendMatrixInstructions(benchmarkGroup, [[32, 32, 2, 1]])
+                appendThreadTiles(benchmarkGroup, [[1,32],[2,32],[4,32],[1,64],[2,64]])
+                appendWorkGroups(benchmarkGroup, [[16,16,1]])
+                appendSizes(benchmarkGroup,sizeList,tileAware)
+                problemGroup.append(benchmarkGroup)
+                
+                benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware)     
+                appendMatrixInstructions(benchmarkGroup, [[16, 16, 1, 4]])
+                appendThreadTiles(benchmarkGroup, [[4,16],[8,16],[2,32],[4,32],[2,64]])
+                appendWorkGroups(benchmarkGroup, [[16,16,1],[64,4,1]])
+                appendSizes(benchmarkGroup,sizeList,tileAware)
+                problemGroup.append(benchmarkGroup)
+                
+                benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware)     
+                appendMatrixInstructions(benchmarkGroup, [[16, 16, 4, 1]])
+                appendThreadTiles(benchmarkGroup, [[4,16],[8,16],[2,32],[4,32],[2,64]])
+                appendWorkGroups(benchmarkGroup, [[16,16,1]])
+                appendSizes(benchmarkGroup,sizeList,tileAware)
+                problemGroup.append(benchmarkGroup)
     
-    if sizeKey == "batch":
-        scheme["GlobalSplitU"] = [1]
-        benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
-        appendThreadTiles(benchmarkGroup, [[4,4],[4,6],[6,4],[4,8],[8,4],[8,8]])
-        appendWorkGroups(benchmarkGroup, [[16,16,1],[16,8,2],[8,16,2],[4,16,4],[16,4,4],[8,8,4]])
-        appendSizes(benchmarkGroup,sizeList,tileAware)
-    elif sizeKey == "tiny":
-        scheme["GlobalSplitU"] = [1,4]
-        benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
-        appendThreadTiles(benchmarkGroup, [[2,2],[4,2],[2,4],[4,4]])
-        appendWorkGroups(benchmarkGroup, [[16,16,1],[8,16,2],[16,8,2],[32,8,4],[8,32,4],[8,8,4]])
-        appendSizes(benchmarkGroup,sizeList,tileAware)
-    elif sizeKey == "small":
-        scheme["GlobalSplitU"] = [1,4]
-        benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware)
-        appendThreadTiles(benchmarkGroup, [[4,4],[4,6],[6,4],[4,8],[8,4],[8,8]])
-        appendWorkGroups(benchmarkGroup, [[16,16,1],[8,16,2],[16,8,2],[4,16,4],[16,4,4],[8,8,4]])
-        appendSizes(benchmarkGroup,sizeList,tileAware)
-    elif sizeKey == "medium":
-        if transposeType == "tn":
-            scheme["GlobalSplitU"] = [1,8]
-            scheme["DepthU"] = [8, 16]
+    else:
+        scheme = generateDefaultScheme()
+        if dType == "h":
+            scheme["AssertSummationElementMultiple"] = [2]
+            scheme["AssertFree0ElementMultiple"] = [2]
+    
+        if sizeKey == "batch":
+            scheme["GlobalSplitU"] = [1]
             benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
-            appendThreadTiles(benchmarkGroup, [[4,4],[4,6],[6,4],[8,4],[4,8],[8,8]])
-            appendWorkGroups(benchmarkGroup, [[16,16,1],[8,16,2],[16,8,2],[8,8,4]])
+            appendThreadTiles(benchmarkGroup, [[4,4],[4,6],[6,4],[4,8],[8,4],[8,8]])
+            appendWorkGroups(benchmarkGroup, [[16,16,1],[16,8,2],[8,16,2],[4,16,4],[16,4,4],[8,8,4]])
             appendSizes(benchmarkGroup,sizeList,tileAware)
-        else:
+        elif sizeKey == "tiny":
+            scheme["GlobalSplitU"] = [1,4]
+            benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
+            appendThreadTiles(benchmarkGroup, [[2,2],[4,2],[2,4],[4,4]])
+            appendWorkGroups(benchmarkGroup, [[16,16,1],[8,16,2],[16,8,2],[32,8,4],[8,32,4],[8,8,4]])
+            appendSizes(benchmarkGroup,sizeList,tileAware)
+        elif sizeKey == "small":
+            scheme["GlobalSplitU"] = [1,4]
+            benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware)
+            appendThreadTiles(benchmarkGroup, [[4,4],[4,6],[6,4],[4,8],[8,4],[8,8]])
+            appendWorkGroups(benchmarkGroup, [[16,16,1],[8,16,2],[16,8,2],[4,16,4],[16,4,4],[8,8,4]])
+            appendSizes(benchmarkGroup,sizeList,tileAware)
+        elif sizeKey == "medium":
+            if transposeType == "tn":
+                scheme["DepthU"] = [8,16]
             scheme["GlobalSplitU"] = [1,8]
             benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
             appendThreadTiles(benchmarkGroup, [[4,4],[4,6],[6,4],[4,8],[8,4],[8,8]])
             appendWorkGroups(benchmarkGroup, [[16,16,1],[8,16,2],[16,8,2],[8,8,4]])
             appendSizes(benchmarkGroup,sizeList,tileAware)
-    else: #sizeKey == "large"
-        scheme["GlobalSplitU"] = [1]
-        benchmarkGroup = generateBenchmarkGroupFromScheme(scheme, tileAware) 
-        appendThreadTiles(benchmarkGroup, [[4,4],[6,4],[4,6],[4,8],[8,4],[8,8]])
-        appendWorkGroups(benchmarkGroup, [[16,16,1],[16,8,2],[8,16,2],[8,8,4]])
-        appendSizes(benchmarkGroup,sizeList,tileAware)
+        else: #sizeKey == "large"
+            scheme["GlobalSplitU"] = [1]
+            benchmarkGroup = generateBenchmarkGroupFromScheme(scheme,tileAware) 
+            appendThreadTiles(benchmarkGroup, [[4,4],[6,4],[4,6],[4,8],[8,4],[8,8]])
+            appendWorkGroups(benchmarkGroup, [[16,16,1],[16,8,2],[8,16,2],[8,8,4]])
+            appendSizes(benchmarkGroup,sizeList,tileAware)
 
-    problemGroup.append(benchmarkGroup)
+        problemGroup.append(benchmarkGroup)
 
-def OutputConfigs(problemMapper, configPath, outputName, library, tileAware):
+def OutputConfigs(problemMapper, configPath, outputName, library, tileAware, mfma, rk):
 
     keys = list(problemMapper.keys())
 
@@ -264,8 +344,10 @@ def OutputConfigs(problemMapper, configPath, outputName, library, tileAware):
         sizeMapper = {}
         for problemDefinition in lineDefinitions:
             size =  GetSize(problemDefinition)
-
-            sizeKey = ClassifySize(size)
+            if rk == "true":
+                sizeKey = ClassifySize(size,rk)
+            else:
+                sizeKey = ClassifySize(size,mfma)
             if sizeKey not in sizeMapper:
                 sizeMapper[sizeKey] = []
             sizeMapper[sizeKey].append(size)
@@ -292,29 +374,27 @@ def OutputConfigs(problemMapper, configPath, outputName, library, tileAware):
         else:
             newConfig = TuningConfiguration()
             newConfig.globalParameters = deepcopy(defaultHeader)
+            if rk:
+                newConfig.globalParameters["MergeFiles"] = True
             newConfig.libraryLogic = deepcopy(libraryLogicMapper[library])
             newConfig.libraryClient = True
             problemGroup = [problemType]
             newConfig.benchmarkProblems = [problemGroup]
             configDefs[configurationFilePath] = newConfig
 
-        for sizeKey in sizeMapper:
-            sizeList = sizeMapper[sizeKey]
-            updateProblemGroupFromKey(key,sizeKey,problemGroup,sizeList,tileAware)
-        
+        if mfma == "true" or rk == "true":
+            updateProblemGroupFromKey(key,sizeKey,problemGroup,sizeMapper[sizeKey],tileAware,mfma,rk)
+        else:
+            for sizeKey in sizeMapper:
+                sizeList = sizeMapper[sizeKey]
+                updateProblemGroupFromKey(key,sizeKey,problemGroup,sizeList,tileAware,mfma,rk)
+
     for key in configDefs:
         newConfig = configDefs[key]
         newConfig.writeLibraryLogic(key)
 
-def GetOutputFileName(outputPath, namePart, key, ext):
-    function, transposeA, transposeB, dType = key
-    fileName = namePart
-
-    if "strided" in function:
-        fileName += "-strided-%s%s.%s" % (transposeA,transposeB,ext)
-    else:
-        fileName += "-%s%s.%s" % (transposeA,transposeB,ext)
-
+def GetOutputFileName(outputPath, namePart, ext):
+    fileName = namePart+".%s" % (ext)
     outputFileName = outputFileName = os.path.join(outputPath, fileName)
     return outputFileName
 
@@ -344,22 +424,38 @@ done
     doitFile.close() 
 
 def OutputScript(problemMapper, scriptPath, namePart):
-
     keys = list(problemMapper.keys())
 
     scriptFileNames = []
+    outputFileName = GetOutputFileName(scriptPath, namePart, "sh")
+    outputFileName2 = GetOutputFileName(scriptPath, namePart+"-strided", "sh")
+    outputFileName3 = GetOutputFileName(scriptPath, namePart+"-all", "sh")
+    scriptFileNames.append(outputFileName)
+    scriptFileNames.append(outputFileName2)
+    count = 0
 
     for key in keys:
-        outputFileName = GetOutputFileName(scriptPath, namePart, key, "sh")
-        scriptFileNames.append(outputFileName)
         lineDefinitions = problemMapper[key]
         lines = ["#!/bin/bash",""]
         for problemDefinition in lineDefinitions:
             rocblas_call = BuildRocBLASBenchmarkCall(problemDefinition)
             lines.append(rocblas_call)
-        with open(outputFileName, 'w') as f:
+        with open(outputFileName, 'a') as f, open(outputFileName2, 'a') as g, open(outputFileName3, 'a') as h:
             for line in lines:
-                f.write("%s\n" % line)
+                if "strided" in line:
+                    g.write("%s\n" % line)
+                    h.write("%s\n" % line)
+                else:
+                    if "bash" in line:
+                        if count == 0:
+                            f.write("%s\n" % line)
+                            g.write("%s\n" % line)
+                            h.write("%s\n" % line)
+                            count = 1
+                    else:
+                        f.write("%s\n" % line)
+                        h.write("%s\n" % line)
+        lines = []
 
     generateRunScript(scriptFileNames, scriptPath)
     
@@ -368,31 +464,53 @@ def OutputScript2(problemMapper, scriptPath, namePart):
     keys = list(problemMapper.keys())
 
     scriptFileNames = []
-    
+    outputFileName = GetOutputFileName(scriptPath, namePart, "sh")
+    outputFileName2 = GetOutputFileName(scriptPath, namePart+"-strided", "sh")
+    outputFileName3 = GetOutputFileName(scriptPath, namePart+"-all", "sh")
+    scriptFileNames.append(outputFileName)
+    scriptFileNames.append(outputFileName2)
+    count = 0    
+
     for key in keys:
-        outputFileName = GetOutputFileName(scriptPath, namePart, key, "sh")
-        scriptFileNames.append(outputFileName)
         lineDefinitions = problemMapper[key]
         lines = ["#!/bin/bash",""]
         for problemDefinition in lineDefinitions:
             rocblas_call = BuildRocBLASBenchmarkCall(problemDefinition)
             lines.append(rocblas_call)
-        with open(outputFileName, 'w') as f:
+        with open(outputFileName, 'a') as f, open(outputFileName2, 'a') as g, open(outputFileName3, 'a') as h:
             for line in lines:
-                if "rocblas-bench" in line:
-                    f.write("ROCBLAS_TENSILE_LIBPATH=${TENSILE_LIBRARY} %s\n" % line)
+                if "strided" in line:
+                    if "rocblas-bench" in line:
+                        g.write("ROCBLAS_TENSILE_LIBPATH=${TENSILE_LIBRARY} %s\n" % line)
+                        h.write("ROCBLAS_TENSILE_LIBPATH=${TENSILE_LIBRARY} %s\n" % line)
+                    else:
+                        g.write("%s\n" % line)
+                        h.write("%s\n" % line)
                 else:
-                    f.write("%s\n" % line)
+                    if "rocblas-bench" in line:
+                        f.write("ROCBLAS_TENSILE_LIBPATH=${TENSILE_LIBRARY} %s\n" % line)
+                        h.write("ROCBLAS_TENSILE_LIBPATH=${TENSILE_LIBRARY} %s\n" % line)
+                    else:
+                        if "bash" in line:
+                            if count == 0:
+                                f.write("%s\n" % line)
+                                g.write("%s\n" % line)
+                                h.write("%s\n" % line)
+                                count = 1
+                        else:
+                            f.write("%s\n" % line)
+                            h.write("%s\n" % line)
+        lines = []
                     
     generateRunScript(scriptFileNames, scriptPath,'2')
 
 def OutputProblemDefinitions(problemMapper, sizePath, namePart):
 
     keys = list(problemMapper.keys())
+    outputFileName = GetOutputFileName(sizePath, namePart, "csv")
 
     for key in keys:
         lineDefinitions = problemMapper[key]
-        outputFileName = GetOutputFileName(sizePath, namePart, key, "csv")
         output = open(outputFileName,"w+")
         writer = csv.DictWriter(output, fieldnames=rocblas_parameters, extrasaction='ignore')
         writer.writeheader()
@@ -404,7 +522,7 @@ def RunMain():
 
     argParser = argparse.ArgumentParser()
 
-    if len(sys.argv) <= 6:
+    if len(sys.argv) <= 8:
         argParser.add_argument("input_file_name", help="configuration file path")
     else:
         argParser.add_argument("input_logs", help="the input path for log files")
@@ -414,14 +532,18 @@ def RunMain():
     argParser.add_argument("output_file_name", help="the output file name")
     argParser.add_argument("library", help="the library Logic name")
     argParser.add_argument("tile_aware", help="true/false tile_aware_selection", default="false")    
+    argParser.add_argument("mfma", help="true/false mfma", default="false")    
+    argParser.add_argument("replacement_kernel", help="true/false replacement kernels", default="false")    
  
     args = argParser.parse_args(userArgs)
     outputPath = args.output_path
     outputName = args.output_file_name
     library = args.library
     tileAware = args.tile_aware
+    mfma = args.mfma
+    rk = args.replacement_kernel
 
-    if len(sys.argv) <= 6:
+    if len(sys.argv) <= 8:
         inputFileName = args.input_file_name
         inputFileBaseName = os.path.basename(inputFileName)
         namePart, _ = os.path.splitext(inputFileBaseName)
@@ -430,7 +552,7 @@ def RunMain():
         networkName = args.network_name
         allLogs = [inputPath+'/'+filename for filename in os.listdir(inputPath) if networkName in filename]
 
-    if len(sys.argv) <= 6:
+    if len(sys.argv) <= 8:
         problemMapper = ProcessFile(inputFileName)
     else:
         problemMapper = ProcessFiles(allLogs)
@@ -448,15 +570,15 @@ def RunMain():
     if not os.path.exists(sizePath):
         os.makedirs(sizePath)
 
-    OutputConfigs(problemMapper, configPath, outputName, library,tileAware)
-    
-    if len(sys.argv) <= 6:
+    OutputConfigs(problemMapper,configPath,outputName,library,tileAware,mfma,rk)
+
+    if len(sys.argv) <= 8:
         OutputScript(problemMapper, scriptPath, namePart)
-        OutputScript2(problemMapper, scriptPath2, namePart)
+        OutputScript2(problemMapper, scriptPath2, namePart+'2')
         OutputProblemDefinitions(problemMapper, sizePath, namePart)
     else:
         OutputScript(problemMapper, scriptPath, networkName)
-        OutputScript2(problemMapper, scriptPath2, networkName)
+        OutputScript2(problemMapper, scriptPath2, networkName+'2')
         OutputProblemDefinitions(problemMapper, sizePath, networkName)
 
 if __name__ == "__main__":
