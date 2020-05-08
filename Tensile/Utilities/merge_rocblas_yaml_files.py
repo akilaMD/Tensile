@@ -225,7 +225,7 @@ class LibraryLogic:
         printExit("Cannot open file: %s" % filename)
 
 
-def MergeTensileLogicFiles(originalLibraryLogic, exactLibraryLogic):
+def MergeTensileLogicFiles(originalLibraryLogic, exactLibraryLogic, noRegressions=False):
   
   mergedLibraryLogic = LibraryLogic()
 
@@ -258,7 +258,6 @@ def MergeTensileLogicFiles(originalLibraryLogic, exactLibraryLogic):
       # if solution exists in the original configuration the
       # its placement in the merged kernel configurations list
       # gets mapped to the pre-existing configuration
-      print(solution)
       idxOrg = solutionList.index(solution)
       replicationMapping[idx] = idxOrg
 
@@ -285,10 +284,16 @@ def MergeTensileLogicFiles(originalLibraryLogic, exactLibraryLogic):
     # kernel configuration
     kernelIndex = exact[1][0]
     
-    if kernelIndex in replicationMapping:
+    if kernelIndex in replicationMapping and noRegressions == False:
       exact[1][0] = replicationMapping[kernelIndex]
-    
-    filteredExactLogicExact.append(exact)
+    elif kernelIndex in replicationMapping and noRegressions == True:
+      print(exact)   
+ 
+    if noRegressions == False or (kernelIndex not in replicationMapping and noRegressions == True):
+        filteredExactLogicExact.append(exact)
+
+  if len(filteredExactLogicExact) == 0:
+   raise Exception("All sizes regressed from original logic file")
 
   sizeList, _ = zip(*filteredExactLogicExact)
 
@@ -320,7 +325,7 @@ def MergeTensileLogicFiles(originalLibraryLogic, exactLibraryLogic):
   return mergedLibraryLogic
 
 
-def ProcessMergeLogicFile(exactFileName, originalFileName, outputFileName):
+def ProcessMergeLogicFile(exactFileName, originalFileName, outputFileName, noRegressions=False):
   
   _, fileName = os.path.split(exactFileName)
 
@@ -329,7 +334,7 @@ def ProcessMergeLogicFile(exactFileName, originalFileName, outputFileName):
   libraryLogic = LibraryLogic(originalFileName)
   libraryLogicExact = LibraryLogic(exactFileName)
 
-  mergedLibraryLogic = MergeTensileLogicFiles(libraryLogic,libraryLogicExact)
+  mergedLibraryLogic = MergeTensileLogicFiles(libraryLogic,libraryLogicExact,noRegressions)
 
   mergedLibraryLogic.writeLibraryLogic(outputFileName)
 
@@ -345,12 +350,19 @@ def RunMergeTensileLogicFiles():
   # Parse Command Line Arguments
   ##############################################################################
   
+  userArgs = sys.argv[1:]
   argParser = argparse.ArgumentParser()
   argParser.add_argument("OriginalLogicPath", help="Path to the original LibraryLogic.yaml input files.")
   argParser.add_argument("ExactLogicPath", help="Path to the exact LibraryLogic.yaml input files.")
   argParser.add_argument("OutputPath", help="Where to write library files?")
-
-  args = argParser.parse_args()
+    
+  if len(sys.argv) == 5:
+    argParser.add_argument("--no-regressions", help="Guarantee no regressions", action='store_true')
+    args = argParser.parse_args(userArgs)
+    noRegressions = True
+  else:
+    args = argParser.parse_args(userArgs)
+    noRegressions = False
 
   originalLogicPath = args.OriginalLogicPath
   exactLogicPath = args.ExactLogicPath
@@ -358,6 +370,7 @@ def RunMergeTensileLogicFiles():
   print ("Original Logic Path: " + originalLogicPath)
   print ("Exact Logic Path: " + exactLogicPath)
   print ("OutputPath: " + outputPath)
+  print ("NoRegressions: " + str(noRegressions))
 
   print("")
   ensurePath(outputPath)
@@ -377,7 +390,7 @@ def RunMergeTensileLogicFiles():
       outputLogicFilePath = os.path.join(outputPath, fileName)
 
       try:
-        ProcessMergeLogicFile(exactLogicFilePath, originalLogicFilePath, outputLogicFilePath)
+        ProcessMergeLogicFile(exactLogicFilePath, originalLogicFilePath, outputLogicFilePath, noRegressions)
       except Exception as ex:
         print("Exception: {0}".format(ex))
 
