@@ -225,11 +225,11 @@ class LibraryLogic:
         printExit("Cannot open file: %s" % filename)
 
 
-def MergeTensileLogicFiles(origionalLibraryLogic, exactLibraryLogic):
+def MergeTensileLogicFiles(originalLibraryLogic, exactLibraryLogic):
   
   mergedLibraryLogic = LibraryLogic()
 
-  solutionList = origionalLibraryLogic.solutionStates
+  solutionList = originalLibraryLogic.solutionStates
   solutionListExact = exactLibraryLogic.solutionStates
 
   indexKey = "SolutionIndex"
@@ -255,15 +255,16 @@ def MergeTensileLogicFiles(origionalLibraryLogic, exactLibraryLogic):
   # to their definitions in the merged files
   for solution in solutionListExact:
     if solution in solutionList:
-      # if solution exists in the origional configuration the
+      # if solution exists in the original configuration the
       # its placement in the merged kernel configurations list
       # gets mapped to the pre-existing configuration
+      print(solution)
       idxOrg = solutionList.index(solution)
       replicationMapping[idx] = idxOrg
 
     else:
       filterdSolutionExactList.append(solution)
-      # if the solution does not exist in the origional configurations
+      # if the solution does not exist in the original configurations
       # it gets mapped to the new offset
       replicationMapping[idx] = idxMapping
       mergedSolutionList.append(solution)
@@ -271,7 +272,7 @@ def MergeTensileLogicFiles(origionalLibraryLogic, exactLibraryLogic):
 
     idx += 1
 
-  exactLogic = origionalLibraryLogic.exactLogic
+  exactLogic = originalLibraryLogic.exactLogic
   exactLogicExact = exactLibraryLogic.exactLogic
 
   filteredExactLogicExact = []
@@ -306,26 +307,26 @@ def MergeTensileLogicFiles(origionalLibraryLogic, exactLibraryLogic):
     index += 1
 
 
-  mergedLibraryLogic.versionString = origionalLibraryLogic.versionString
-  mergedLibraryLogic.scheduleName = origionalLibraryLogic.scheduleName
-  mergedLibraryLogic.architectureName = origionalLibraryLogic.architectureName
-  mergedLibraryLogic.deviceNames = origionalLibraryLogic.deviceNames
-  mergedLibraryLogic.problemType = origionalLibraryLogic.problemType
+  mergedLibraryLogic.versionString = originalLibraryLogic.versionString
+  mergedLibraryLogic.scheduleName = originalLibraryLogic.scheduleName
+  mergedLibraryLogic.architectureName = originalLibraryLogic.architectureName
+  mergedLibraryLogic.deviceNames = originalLibraryLogic.deviceNames
+  mergedLibraryLogic.problemType = originalLibraryLogic.problemType
   mergedLibraryLogic.solutionStates = mergedSolutionList
-  mergedLibraryLogic.indexOrder = origionalLibraryLogic.indexOrder
+  mergedLibraryLogic.indexOrder = originalLibraryLogic.indexOrder
   mergedLibraryLogic.exactLogic = mergedExactLogic
-  mergedLibraryLogic.rangeLogic  = origionalLibraryLogic.rangeLogic
+  mergedLibraryLogic.rangeLogic  = originalLibraryLogic.rangeLogic
 
   return mergedLibraryLogic
 
 
-def ProcessMergeLogicFile(exactFileName, origionalFileName, outputFileName):
+def ProcessMergeLogicFile(exactFileName, originalFileName, outputFileName):
   
   _, fileName = os.path.split(exactFileName)
 
   print ("processing file: " + fileName)
 
-  libraryLogic = LibraryLogic(origionalFileName)
+  libraryLogic = LibraryLogic(originalFileName)
   libraryLogicExact = LibraryLogic(exactFileName)
 
   mergedLibraryLogic = MergeTensileLogicFiles(libraryLogic,libraryLogicExact)
@@ -345,16 +346,16 @@ def RunMergeTensileLogicFiles():
   ##############################################################################
   
   argParser = argparse.ArgumentParser()
-  argParser.add_argument("OrigionalLogicPath", help="Path to the origional LibraryLogic.yaml input files.")
+  argParser.add_argument("OriginalLogicPath", help="Path to the original LibraryLogic.yaml input files.")
   argParser.add_argument("ExactLogicPath", help="Path to the exact LibraryLogic.yaml input files.")
   argParser.add_argument("OutputPath", help="Where to write library files?")
 
   args = argParser.parse_args()
 
-  origionalLogicPath = args.OrigionalLogicPath
+  originalLogicPath = args.OriginalLogicPath
   exactLogicPath = args.ExactLogicPath
   outputPath = args.OutputPath
-  print ("Origional Logic Path: " + origionalLogicPath)
+  print ("Original Logic Path: " + originalLogicPath)
   print ("Exact Logic Path: " + exactLogicPath)
   print ("OutputPath: " + outputPath)
 
@@ -370,18 +371,18 @@ def RunMergeTensileLogicFiles():
   for exactLogicFilePath in exactLogicFiles:
     _, fileName = os.path.split(exactLogicFilePath)
     
-    origionalLogicFilePath = os.path.join(origionalLogicPath, fileName)
-    if os.path.isfile(origionalLogicFilePath):
+    originalLogicFilePath = os.path.join(originalLogicPath, fileName)
+    if os.path.isfile(originalLogicFilePath):
       
       outputLogicFilePath = os.path.join(outputPath, fileName)
 
       try:
-        ProcessMergeLogicFile(exactLogicFilePath, origionalLogicFilePath, outputLogicFilePath)
+        ProcessMergeLogicFile(exactLogicFilePath, originalLogicFilePath, outputLogicFilePath)
       except Exception as ex:
         print("Exception: {0}".format(ex))
 
     else:
-      print ("# file does not exist in origional directory " + origionalLogicFilePath)
+      print ("# file does not exist in original directory " + originalLogicFilePath)
     
 
 ################################################################################
