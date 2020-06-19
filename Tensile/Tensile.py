@@ -31,7 +31,7 @@ from .Common import globalParameters, print1, ensurePath, \
 from . import BenchmarkProblems
 from . import ClientWriter
 from . import LibraryLogic
-from . import LibraryIO
+from . import YAMLIO
 from . import __version__
 
 ###############################################################################
@@ -157,7 +157,7 @@ def Tensile(userArgs):
       globalParameters[key] = defaultGlobalParameters[key]
 
   # read config
-  config = LibraryIO.readConfig( configPath )
+  config = YAMLIO.readConfig( configPath )
   globalParameters["ConfigPath"] = configPath
 
   # assign global parameters

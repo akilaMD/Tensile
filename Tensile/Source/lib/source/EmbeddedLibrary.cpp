@@ -31,6 +31,8 @@
 #include <Tensile/Contractions.hpp>
 #include <Tensile/EmbeddedData.hpp>
 
+#include <Tensile/llvm/Loading.hpp>
+
 namespace Tensile
 {
     template <typename MyProblem, typename MySolution>
@@ -43,7 +45,7 @@ namespace Tensile
         if(data.size() > 1)
             throw std::runtime_error(concatenate("Expected one data item, found ", data.size()));
 
-        return LoadLibraryData<MyProblem, MySolution>(data[0]);
+        return LLVMLoadLibraryData<MyProblem, MySolution>(data[0]);
     }
 
     template std::shared_ptr<SolutionLibrary<ContractionProblem, ContractionSolution>>

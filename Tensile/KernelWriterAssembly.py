@@ -6029,7 +6029,7 @@ class KernelWriterAssembly(KernelWriter):
       #         lastVgprForReads ^  ^         ^
       #              startVgprReuse ^         ^
       #                             lastValuC ^
-      # if valuC does not include all of lastVgprForReads, we can reuse the
+      # if valuC does not include all of lastVgprForReads, we can reuse the 
       # non-overlapped part of lastVgprForReads
       # |<-------------- valuC -------------->|
       # |xxxxxxxxxxxxxxxxxxxxx|xxxxxxxxxxxxxxx|oooooo|xx|
@@ -6038,7 +6038,7 @@ class KernelWriterAssembly(KernelWriter):
       #                                  startVgprReuse ^
       vbegin = self.numVgprValuC
       vsize = max(0, self.lastVgprForReads-self.numVgprValuC)
-    else:
+    else: 
       vbegin = self.startVgprValuA
       vsize = self.lastVgprForReads - self.startVgprValuA
 

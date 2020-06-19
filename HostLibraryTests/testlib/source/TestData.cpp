@@ -39,12 +39,6 @@
 
 #include <Tensile/Utils.hpp>
 
-#ifdef TENSILE_YAML
-const std::string TestData::defaultExtension = "yaml";
-#else
-const std::string TestData::defaultExtension = "dat";
-#endif
-
 TestData::operator bool() const
 {
     return boost::filesystem::is_directory(dataDir());
@@ -70,10 +64,9 @@ boost::filesystem::path TestData::dataDir() const
     return m_dataDir;
 }
 
-boost::filesystem::path TestData::file(std::string const& filename,
-                                       std::string const& extension) const
+boost::filesystem::path TestData::file(std::string const& filename) const
 {
-    return dataDir() / (filename + "." + extension);
+    return dataDir() / filename;
 }
 
 std::vector<boost::filesystem::path> TestData::glob(std::string const& pattern) const
