@@ -12,7 +12,7 @@ GlobalParameters:
   NumBenchmarks: 1
   SyncsPerBenchmark: 1
   LibraryPrintDebug: False
-  NumElementsToValidate: 100 
+  NumElementsToValidate: 100
   ValidationMaxToPrint: 4
   ValidationPrintValids: False
   ShortNames: False
@@ -36,7 +36,7 @@ BenchmarkProblems:
       OperationType: GEMM
       DataType: d
       TransposeA: True
-      TransposeB: False 
+      TransposeB: False
       UseBeta: True
       Batched: True
 
@@ -150,4 +150,7 @@ BenchmarkProblems:
 
 ########################################
 LibraryLogic:
-
+  ArchitectureName: gfx908
+  DeviceNames: [Device 7380, Device 7388, Device 738c, Device 7390, Device 731f]
+  ScheduleName: arcturus
+LibraryClient:
