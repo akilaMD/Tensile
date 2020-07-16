@@ -1205,9 +1205,14 @@ def TensileCreateLibrary():
   # Translate GPU targets to filter filenames in Tensile_LOGIC directory
   mapArchitecture = {'all':'_','gfx000':'none', 'gfx803':'r9nano',
         'gfx900':'vega10', 'gfx906':'vega20', 'gfx908':'arcturus'}
+  
+  # Replacement kernels do not appear on arcturus, thus try and use gfx803
+  pickupReplacementKernels = False
 
   for key in mapArchitecture:
     if arguments["Architecture"] == key:
+      if arguments["Architecture"] == "gfx908":
+        pickupReplacementKernels = True
       arguments["Architecture"] = mapArchitecture[key]
 
   logicFiles = [os.path.join(logicPath, f) for f in os.listdir(logicPath) \
@@ -1215,6 +1220,12 @@ def TensileCreateLibrary():
       and os.path.splitext(f)[1]==".yaml") \
       and arguments["Architecture"] in os.path.splitext(f)[0] \
       or "hip" in os.path.splitext(f)[0]]
+
+  if pickupReplacementKernels == True:
+    logicFiles.append([os.path.join(logicPath, f) for f in os.listdir(logicPath) \
+      if (os.path.isfile(os.path.join(logicPath, f)) \
+      and os.path.splitext(f)[1]==".yaml") \
+      and "r9nano" in os.path.splitext(f)[0]]
 
   print1("# LibraryLogicFiles:" % logicFiles)
   for logicFile in logicFiles:
